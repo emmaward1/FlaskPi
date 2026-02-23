@@ -1,14 +1,162 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
+    <head>
+        <link rel="stylesheet" href="static/css/styles.css" />
+        <title>Smart Light Dashboard</title>
+    </head>
+    <body>
+        <h1>Smart Light Dashboard</h1>
 
-    <link rel="stylesheet"
-href="static/css/styles.css"
+        <h2>Manual Controls</h2>
+        <button onclick="ledOn()">Light ON</button>
+        <button onclick="ledOff()">Light OFF</button>
+        <button onclick="heaterOn()">Heater ON</button>
+        <button onclick="heaterOff()">Heater OFF</button>
 
-</head>
+        <h2>Auto / Energy Modes</h2>
+        <button onclick="autoLightOn()">Auto Light ON</button>
+        <button onclick="autoLightOff()">Auto Light OFF</button>
+        <button onclick="autoHeaterOn()">Auto Heater ON</button>
+        <button onclick="autoHeaterOff()">Auto Heater OFF</button>
 
-<body>
-    <h1>Hello, world!</h1>
-</body>
+        <h3>Energy Saving Modes</h3>
+        <button onclick="energyMode1()">Energy Mode 1</button>
+        <button onclick="energyMode2()">Energy Mode 2</button>
+        <button onclick="energyMode3()">Energy Mode 3</button>
 
+        <h3>Set Parameters</h3>
+        <label>Heater Threshold:</label>
+        <input
+            type="number"
+            step="0.1"
+            id="tempThreshold"
+            placeholder="e.g. 21"
+        />
+        <button onclick="setTemp()">Set Temp</button>
+        <br />
+        <label>Mode 3 Movement Window (min):</label>
+        <input type="number" id="movementWindow" placeholder="e.g. 5" />
+        <button onclick="setWindow()">Set Window</button>
+
+        <h2>Status</h2>
+        <p id="status">Loading...</p>
+        <p id="sensorValue">Light Sensor: ...</p>
+        <p id="beamCount">Beam Breaks: ...</p>
+
+        <script>
+            const PROXY_BASE = "http://localhost:3000";
+
+            // ---------------------------
+            // Fetch sensor & beam every second
+            // ---------------------------
+            async function updateSensors() {
+                try {
+                    const res = await fetch(`${PROXY_BASE}/sensor`);
+                    const data = await res.json();
+                    document.getElementById("sensorValue").innerText =
+                        "Light Sensor: " + (data.light_sensor ?? "unknown");
+                    document.getElementById("beamCount").innerText =
+                        "Beam breaks: " + (data.beam_count ?? 0);
+                } catch (err) {
+                    console.error(err);
+                    document.getElementById("sensorValue").innerText =
+                        "Error reading sensor";
+                }
+            }
+
+            setInterval(updateSensors, 1000);
+            updateSensors();
+
+            // ---------------------------
+            // Fetch live status from /status_json
+            // ---------------------------
+            async function updateStatus() {
+                try {
+                    const res = await fetch(`${PROXY_BASE}/status_json`);
+                    const data = await res.json();
+                    document.getElementById("status").innerHTML =
+                        `Light: ${data.light_status} | Duration ON: ${data.light_duration}<br>` +
+                        `Heater: ${data.heater_status} | Duration ON: ${data.heater_duration}<br>` +
+                        `Current Temp: ${data.temp ?? "N/A"} °C`;
+                } catch (err) {
+                    console.error(err);
+                    document.getElementById("status").innerText =
+                        "Error fetching status";
+                }
+            }
+
+            setInterval(updateStatus, 1000);
+            updateStatus();
+
+            // ---------------------------
+            // Manual Control Functions
+            // ---------------------------
+            async function ledOn() {
+                await fetch(`${PROXY_BASE}/light_on`);
+                updateStatus();
+            }
+            async function ledOff() {
+                await fetch(`${PROXY_BASE}/light_off`);
+                updateStatus();
+            }
+            async function heaterOn() {
+                await fetch(`${PROXY_BASE}/heater_on`);
+                updateStatus();
+            }
+            async function heaterOff() {
+                await fetch(`${PROXY_BASE}/heater_off`);
+                updateStatus();
+            }
+
+            // ---------------------------
+            // Auto / Energy Mode Functions
+            // ---------------------------
+            async function autoLightOn() {
+                await fetch(`${PROXY_BASE}/light_auto_on`);
+                updateStatus();
+            }
+            async function autoLightOff() {
+                await fetch(`${PROXY_BASE}/light_auto_off`);
+                updateStatus();
+            }
+            async function autoHeaterOn() {
+                await fetch(`${PROXY_BASE}/temp_auto_on`);
+                updateStatus();
+            }
+            async function autoHeaterOff() {
+                await fetch(`${PROXY_BASE}/temp_auto_off`);
+                updateStatus();
+            }
+
+            async function energyMode1() {
+                await fetch(`${PROXY_BASE}/energy_mode_1`);
+                updateStatus();
+            }
+            async function energyMode2() {
+                await fetch(`${PROXY_BASE}/energy_mode_2`);
+                updateStatus();
+            }
+            async function energyMode3() {
+                await fetch(`${PROXY_BASE}/energy_mode_3`);
+                updateStatus();
+            }
+
+            // ---------------------------
+            // Set Parameters
+            // ---------------------------
+            async function setTemp() {
+                const temp = document.getElementById("tempThreshold").value;
+                if (!temp) return alert("Enter a temp threshold");
+                await fetch(`${PROXY_BASE}/set_temp?temp=${temp}`);
+                updateStatus();
+            }
+
+            async function setWindow() {
+                const min = document.getElementById("movementWindow").value;
+                if (!min) return alert("Enter a window in minutes");
+                await fetch(`${PROXY_BASE}/set_window?minutes=${min}`);
+                updateStatus();
+            }
+        </script>
+    </body>
 </html>
